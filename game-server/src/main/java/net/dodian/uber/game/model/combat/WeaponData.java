@@ -9,7 +9,7 @@ public enum WeaponData {
     BOW(new String[]{"bow", "seercull"}, 1764, new BowHandler()),
     WAND(new String[]{"wand", "staff", "toktz-mej-tal"}, 328, new WandHandler()),
     THROWABLE(new String[]{"dart", "knife", "javelin"}, 4446, new ThrowableHandler()),
-    SWORDS(new String[]{"dagger", "sword", "toktz-xil-ak"}, 2276, new SwordsHandler()),
+    SWORDS(new String[]{"dagger", "sword", "toktz-xil-ak", "wolfbane"}, 2276, new SwordsHandler()),
     LONGSWORDS(new String[]{"scimitar", "longsword", "toktz-xil-ek"}, 2423, new LongSwordsHandler()),
     PICKAXE(new String[]{"pickaxe"}, 5570, new PickaxeHandler()),
     AXES(new String[]{"axe", "battleaxe"}, 1698, new AxeHandler()),

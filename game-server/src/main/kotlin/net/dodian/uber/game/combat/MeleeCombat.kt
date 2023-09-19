@@ -25,6 +25,12 @@ fun Client.handleMelee(): Int {
             lastCombat = System.currentTimeMillis()
         } else return 0
 
+    if (target is Npc && Server.npcManager.getNpc(target.slot).id == 2267) {
+        send(SendMessage("Cant use melee on this monster!"))
+        resetAttack()
+        return 0
+    }
+
         val emote = Server.itemManager.getAttackAnim(equipment[Equipment.Slot.WEAPON.id])
         setFocus(target.position.x, target.position.y)
         if (target is Player && duelFight && duelRule[1]) {
@@ -41,6 +47,18 @@ fun Client.handleMelee(): Int {
              else if(getSlayerDamage(npcId, false) == 2)
                  maxHit *= 1.2
          }
+        /* Silver weakness! */
+        if (target is Npc && Server.npcManager.getNpc(target.slot).weakness == Npc.weaponWeakness.SILVERWEAPON) {
+            val silverWeapon = listOf(2952)
+            if (equipment[Equipment.Slot.WEAPON.id] in silverWeapon) { //Wolfbane!
+                maxHit *= 2;
+                if(Misc.chance(8) == 1) {
+                    maxHit *= 2
+                    //Server.npcManager.getNpc(target.slot).setGfx(274, 50) //TODO: fix gfx for npc!
+                    send(SendMessage("<col=8B0000>You put a deep wound into your target!"))
+                }
+            }
+        }
         if(target is Player) {
             val player = Server.playerHandler.getClient(target.slot)
             if (player.prayerManager.isPrayerOn(Prayers.Prayer.PROTECT_MELEE)) maxHit /= 2.0

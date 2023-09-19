@@ -30,6 +30,13 @@ public class MagicOnNpc implements Packet {
         if (!client.GoodDistance(EnemyX2, EnemyY2, client.getPosition().getX(), client.getPosition().getY(), 5)) {
             return;
         }
+
+        if(id == 2267) { //Only melee boss!
+            client.send(new SendMessage("Cant use magic on this monster!"));
+            client.resetAttack();
+            return;
+        }
+
         if (EnemyHP2 < 1 || client.deathTimer > 0 || !canAttackNpc(client, id)) {
             if(EnemyHP2 < 1 || client.deathTimer > 0)
                 client.send(new SendMessage("That monster has already been killed!"));

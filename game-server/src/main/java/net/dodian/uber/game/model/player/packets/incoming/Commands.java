@@ -1275,13 +1275,6 @@ public class Commands implements Packet {
             }
             //Command to test out item drops!
             /*if (cmd[0].equalsIgnoreCase("moo")) {
-                for(int i = 0; i < 100; i++) {
-                    GroundItem item = new GroundItem(client.getPosition(), 4151, 1, client.getSlot(), -1);
-                    Ground.items.add(item);
-                }
-                System.out.println("Done!!!");
-            }*/
-            /*if (cmd[0].equalsIgnoreCase("moo")) {
                 try {
                     int id = Integer.parseInt(cmd[1]);
                     int amount = Integer.parseInt(cmd[2]);
@@ -1291,6 +1284,53 @@ public class Commands implements Packet {
                     client.send(new SendMessage("wrong usage! ::moo id amount"));
                 }
             }*/
+            if (cmd[0].equalsIgnoreCase("loot_moo")) {
+                try {
+                    int npcId = client.getPlayerNpc() > 0 && cmd.length == 2 ? client.getPlayerNpc() : Integer.parseInt(cmd[1]);
+                    int amount = client.getPlayerNpc() > 0 && cmd.length == 2 ? Integer.parseInt(cmd[1]) : Integer.parseInt(cmd[2]);
+                    amount = amount < 1 ? 1 : Math.min(amount, 10000); // need to set amount 1 - 10000!
+                    amount = getGameWorldId() == 2 ? 100 : amount;
+                    NpcData n = Server.npcManager.getData(npcId);
+                    if (n == null)
+                        client.send(new SendMessage("This npc have no data!"));
+                    else if (n.getDrops().isEmpty())
+                        client.send(new SendMessage(n.getName() + " do not got any drops!"));
+                    else {
+                        ArrayList<Integer> lootedItem = new ArrayList<>();
+                        ArrayList<Integer> lootedAmount = new ArrayList<>();
+                        for (int LOOP = 0; LOOP < amount; LOOP++) {
+                            for (NpcDrop drop : n.getDrops()) {
+                                if (drop == null) continue;
+                                if (drop.getChance() >= 100.0) { // 100% items!
+                                    int pos = lootedItem.lastIndexOf(drop.getId());
+                                    if (pos == -1) {
+                                        lootedItem.add(drop.getId());
+                                        lootedAmount.add(drop.getAmount());
+                                    } else
+                                        lootedAmount.set(pos, lootedAmount.get(pos) + drop.getAmount());
+                                } else {
+                                    double chance = Misc.chance(100000) / 1000D;
+                                    if (chance <= drop.getChance()) {
+                                        int pos = lootedItem.lastIndexOf(drop.getId());
+                                        if (pos == -1) {
+                                            lootedItem.add(drop.getId());
+                                            lootedAmount.add(drop.getAmount());
+                                        } else
+                                            lootedAmount.set(pos, lootedAmount.get(pos) + drop.getAmount());
+                                    }
+                                }
+                            }
+                        }
+                        client.send(new SendString("Loot from " + amount + " " + n.getName() + "" + ((client.playerRights) > 1 ? ", ID: " + npcId : ""), 5383));
+                        client.checkBankInterface = true;
+                        client.sendBank(lootedItem, lootedAmount);
+                        client.resetItems(5064);
+                        client.send(new InventoryInterface(5292, 5063));
+                    }
+                } catch (Exception e) {
+                    client.send(new SendMessage("wrong usage! ::loot_new " + (client.getPlayerNpc() > 0 ? "amount" : "npcid amount") + ""));
+                }
+            }
             if (cmd[0].equalsIgnoreCase("loot_new")) {
                 try {
                     int npcId = client.getPlayerNpc() > 0 && cmd.length == 2 ? client.getPlayerNpc() : Integer.parseInt(cmd[1]);
@@ -1340,8 +1380,7 @@ public class Commands implements Packet {
                                     currentChance += checkChance;
                             }
                         }
-                        for (int i = 0; i < lootedItem.size(); i++)
-                            client.send(new SendString("Loot from " + amount + " " + n.getName() + ", ID: " + npcId, 5383));
+                        client.send(new SendString("Loot from " + amount + " " + n.getName() + "" + ((client.playerRights) > 1 ? ", ID: " + npcId : ""), 5383));
                         client.checkBankInterface = true;
                         client.sendBank(lootedItem, lootedAmount);
                         client.resetItems(5064);
@@ -1350,7 +1389,7 @@ public class Commands implements Packet {
                             client.send(new SendMessage("<col=FF6347>This is a result with a ring of wealth!"));
                     }
                 } catch (Exception e) {
-                    client.send(new SendMessage("wrong usage! ::loot " + (client.getPlayerNpc() > 0 ? "amount" : "npcid amount") + ""));
+                    client.send(new SendMessage("wrong usage! ::loot_new " + (client.getPlayerNpc() > 0 ? "amount" : "npcid amount") + ""));
                 }
             }
             if (cmd[0].equalsIgnoreCase("tele") && (client.playerRights > 1 || getGameWorldId() > 1)) {

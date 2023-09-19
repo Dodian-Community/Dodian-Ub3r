@@ -121,11 +121,12 @@ public class NpcUpdating extends EntityUpdating<Npc> {
 
     public void appendTextUpdate(Npc npc, Stream stream) {
         stream.writeString(npc.getText());
+        //stream.writeDWord(0); //Do we need?!
     }
 
     public void appendGfxUpdate(Npc npc, Stream stream) {
         stream.writeWord(npc.getGfxId());
-        stream.writeDWord(npc.getGfxHeight());
+        stream.writeDWord(npc.getGfxHeight() << 16);
     }
 
     @Override

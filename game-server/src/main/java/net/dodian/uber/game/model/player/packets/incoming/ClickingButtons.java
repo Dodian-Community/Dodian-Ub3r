@@ -1026,14 +1026,15 @@ public class ClickingButtons implements Packet {
                 client.requestAnim(3544, 0);
             break;
             case 74108:
-                Skillcape skillcape = Skillcape.getSkillCape(client.getEquipment()[Equipment.Slot.CAPE.getId()]);
+                int id = client.getEquipment()[Equipment.Slot.CAPE.getId()];
+                Skillcape skillcape = Skillcape.getSkillCape(id);
                 if (skillcape != null) {
                     client.requestAnim(skillcape.getEmote(), 0);
                     client.gfx0(skillcape.getGfx());
-                } else if (client.getEquipment()[Equipment.Slot.CAPE.getId()] == 9813) { //Questpoint cape
+                } else if (id == 9813) { //Questpoint cape
                     client.requestAnim(4945, 0);
                     client.gfx0(816);
-                } else if (client.getEquipment()[Equipment.Slot.CAPE.getId()] == 13280) { //Max cape
+                } else if (client.GetItemName(id).toLowerCase().startsWith("max cape")) { //Max cape
                     skillcape = Skillcape.getRandomCape();
                     client.requestAnim(skillcape.getEmote(), 0);
                     client.gfx0(skillcape.getGfx());

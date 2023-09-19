@@ -173,7 +173,8 @@ public abstract class Entity {
 
     public enum damageType {
         MELEE, RANGED, MAGIC, //Standard
-        FIRE_BREATH, JAD_MAGIC, JAD_RANGED //Special
+        FIRE_BREATH, JAD_MAGIC, JAD_RANGED, //
+        TRUEDAMAGE
         ;
     }
 

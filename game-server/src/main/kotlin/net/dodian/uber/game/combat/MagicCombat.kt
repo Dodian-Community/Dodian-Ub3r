@@ -20,6 +20,12 @@ fun Client.handleMagic(): Int {
     if (equipment[Equipment.Slot.WEAPON.id] !in staves || autocast_spellIndex < 0)
         return -1
 
+    if (target is Npc && Server.npcManager.getNpc(target.slot).id == 2267) {
+        send(SendMessage("Cant use magic on this monster!"))
+        resetAttack()
+        return 0
+    }
+
     val time = System.currentTimeMillis()
     val slot = autocast_spellIndex%4
     if (time - lastAttack > coolDown[slot]) {
@@ -48,8 +54,8 @@ fun Client.handleMagic(): Int {
         if(getSlayerDamage(checkNpc.id, true) == 2)
             maxHit *= 1.2
         if(checkNpc.boss) {
-            var reduceDefence = min(checkNpc.defence / 15, 18)
-            var value = (12.0 + Misc.random(reduceDefence.toInt())) / 100.0
+            val reduceDefence = min(checkNpc.defence / 15, 18)
+            val value = (12.0 + Misc.random(reduceDefence)) / 100.0
             maxHit *= 1.0 - value
             //System.out.println("reduce value: $value and defence $reduceDefence to be new max hit $maxHit")
         }
@@ -88,12 +94,14 @@ fun Client.handleMagic(): Int {
         player.dealDamage(hit, landCrit)
     }
     /* Magic graphics! */
-    if (slot == 2) //Blood effect
-        stillgfx(377, target.position.y, target.position.x)
-    else if (slot == 3) //Freeze effect
-        stillgfx(369, target.position.y, target.position.x)
-    else //Other ancient effect!
-        stillgfx(78, target.position.y, target.position.x)
+    when (slot) {
+        2 //Blood effect
+        -> stillgfx(377, target.position.y, target.position.x)
+        3 //Freeze effect
+        -> stillgfx(369, target.position.y, target.position.x)
+        else //Other ancient effect!
+        -> stillgfx(78, target.position.y, target.position.x)
+    }
 
     if(target is Npc) {
         giveExperience(40 * hit, Skill.MAGIC)

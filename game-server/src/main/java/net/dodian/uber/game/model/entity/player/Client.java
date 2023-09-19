@@ -1,6 +1,5 @@
 package net.dodian.uber.game.model.entity.player;
 
-import net.dodian.uber.comm.ConnectionList;
 import net.dodian.uber.comm.LoginManager;
 import net.dodian.uber.comm.PacketData;
 import net.dodian.uber.comm.SocketHandler;
@@ -8,7 +7,6 @@ import net.dodian.uber.game.Constants;
 import net.dodian.uber.game.Server;
 import net.dodian.uber.game.event.Event;
 import net.dodian.uber.game.event.EventManager;
-import net.dodian.uber.game.model.Login;
 import net.dodian.uber.game.model.Position;
 import net.dodian.uber.game.model.ShopHandler;
 import net.dodian.uber.game.model.UpdateFlag;
@@ -80,8 +78,7 @@ public class Client extends Player implements Runnable {
 	public int pickX, pickY, pickId, pickTries;
 	public CopyOnWriteArrayList<Friend> friends = new CopyOnWriteArrayList<>();
 	public CopyOnWriteArrayList<Friend> ignores = new CopyOnWriteArrayList<>();
-	public int currentButton = 0, currentStatus = 0;
-	public boolean spamButton = false, tradeLocked = false;
+	public boolean tradeLocked = false;
 	public boolean officialClient = true;
 	/*
 	 * Danno: Last row all disabled. As none have effect.
@@ -207,29 +204,30 @@ public class Client extends Player implements Runnable {
 			getOutputStream().writeDWord_v1(getExperience(skill));
 			getOutputStream().writeByte(out);
 		} catch (Exception e) {
-			e.printStackTrace();
+			//TODO: Fix this shiet up?!
 		}
 	}
 
 	public int getbattleTimer(int weapon) {
 		String wep = GetItemName(weapon).toLowerCase();
-		double wepPlainTime = 6.0; //Default for many weapons!
-		if (wep.contains("dart") || wep.contains("knife")) {
-			wepPlainTime = 8.0;
-		} else if (wep.contains("longsword") || wep.contains("mace") || wep.contains("axe") && !wep.contains("dharok")
+		int speed = 4;
+		if (wep.contains("dart") || wep.contains("knife"))
+			speed = 2;
+		else if (wep.contains("wolfbane"))
+			speed = 3;
+		else if (wep.contains("longsword") || wep.contains("mace") || wep.contains("axe") && !wep.contains("dharok")
 				|| wep.contains("spear") || wep.contains("tzhaar-ket-em") || wep.contains("torag") || wep.contains("guthan")
 				|| wep.contains("verac") || wep.contains("staff") && !wep.contains("ahrim") || wep.contains("composite")
-				|| wep.contains("crystal") || wep.contains("thrownaxe") || wep.contains("longbow")) {
-			wepPlainTime = 5.0;
-		} else if (wep.contains("battleaxe") || wep.contains("warhammer") || wep.contains("godsword")
+				|| wep.contains("crystal") || wep.contains("thrownaxe") || wep.contains("longbow"))
+			speed = 5;
+		else if (wep.contains("battleaxe") || wep.contains("warhammer") || wep.contains("godsword")
 				|| wep.contains("barrelchest") || wep.contains("ahrim") || wep.contains("toktz-mej-tal")
-				|| wep.contains("dorgeshuun") || wep.contains("crossbow") || wep.contains("javelin")) {
-			wepPlainTime = 4.0;
-		} else if (wep.contains("2h sword") || wep.contains("halberd") || wep.contains("maul") || wep.contains("balmung")
-				|| wep.contains("tzhaar-ket-om") || wep.contains("dharok")) {
-			wepPlainTime = 3.0;
-		}
-		return (int) (6 - 0.6 * wepPlainTime) * 1000;
+				|| wep.contains("dorgeshuun") || wep.contains("crossbow") || wep.contains("javelin"))
+			speed = 6;
+		else if (wep.contains("2h sword") || wep.contains("halberd") || wep.contains("maul") || wep.contains("balmung")
+				|| wep.contains("tzhaar-ket-om") || wep.contains("dharok"))
+			speed = 7;
+		return (int) ((speed * 1000) * 0.6);
 	}
 
 	public void CheckGear() {
@@ -487,7 +485,7 @@ public class Client extends Player implements Runnable {
 			isActive = false;
 			buffer = null;
 		} catch (java.io.IOException ioe) {
-			ioe.printStackTrace();
+			System.out.println("something wrong with the destruct!");
 		}
 		super.destruct();
 	}
@@ -603,7 +601,7 @@ public class Client extends Player implements Runnable {
 			String customClientVersion = getInputStream().readString();
 			officialClient = customClientVersion.equals(getGameClientCustomVersion());
 			setPlayerName(getInputStream().readString());
-			if (getPlayerName() == null || getPlayerName().length() == 0) {
+			if (getPlayerName() == null || getPlayerName().isEmpty()) {
 				setPlayerName("player" + getSlot());
 			}
 			playerPass = getInputStream().readString();
@@ -736,7 +734,6 @@ public class Client extends Player implements Runnable {
 			mySocketHandler.getOutput().write(0);
 			getUpdateFlags().setRequired(UpdateFlag.APPEARANCE, true);
 		} catch (java.lang.Exception __ex) {
-			__ex.printStackTrace();
 			destruct();
 			return;
 		}
@@ -2238,9 +2235,6 @@ public class Client extends Player implements Runnable {
 				c.refreshFriends();
 			}
 		}
-		/* Update of both player and npc! */
-		PlayerUpdating.getInstance().update(this, outputStream);
-		NpcUpdating.getInstance().update(this, outputStream);
 		/* Login write settings! */
 		frame36(287, 1);
 		WriteEnergy();
@@ -2268,6 +2262,9 @@ public class Client extends Player implements Runnable {
 				Equipment.Slot.RING.getId());
 		setEquipment(getEquipment()[Equipment.Slot.WEAPON.getId()], getEquipmentN()[Equipment.Slot.WEAPON.getId()],
 				Equipment.Slot.WEAPON.getId());
+		/* Extra slot that I forgot to add...Obs! */
+		setEquipment(getEquipment()[Equipment.Slot.BLESSING.getId()], getEquipmentN()[Equipment.Slot.BLESSING.getId()],
+				Equipment.Slot.BLESSING.getId());
 		/* Reset values for items*/
 		resetItems(3214);
 		resetBank();
@@ -2306,6 +2303,9 @@ public class Client extends Player implements Runnable {
 			e.printStackTrace();
 		}
 		loaded = true;
+		/* Update of both player and npc! */
+		PlayerUpdating.getInstance().update(this, outputStream);
+		NpcUpdating.getInstance().update(this, outputStream);
 	}
 
 	public void update() { //Update npc before player!
@@ -2565,7 +2565,6 @@ public class Client extends Player implements Runnable {
 		}
 		// If killed apply dead
 		if (deathStage == 0 && getCurrentHealth() < 1) {
-			resetAttack();
 			if(target instanceof Npc) {
 				Npc npc = Server.npcManager.getNpc(target.getSlot());
 				npc.removeEnemy(this);
@@ -2576,6 +2575,7 @@ public class Client extends Player implements Runnable {
 					p.DuelVictory();
 				}
 			}
+			resetAttack(); //Should reset values correctly ?!
 			requestAnim(836, 5);
 			setCurrentHealth(0);
 			deathStage++;
@@ -3638,11 +3638,11 @@ public class Client extends Player implements Runnable {
 
 	public boolean playerHasItem(int itemID) {
 		itemID++;
-		for (int i = 0; i < playerItems.length; i++) {
-			if (playerItems[i] == itemID) {
-				return true;
-			}
-		}
+        for (int playerItem : playerItems) {
+            if (playerItem == itemID) {
+                return true;
+            }
+        }
 		return false;
 	}
 
@@ -3656,21 +3656,21 @@ public class Client extends Player implements Runnable {
 
 	public boolean checkItem(int itemID) {
 		itemID++;
-		for (int i = 0; i < playerItems.length; i++) {
-			if (playerItems[i] == itemID) {
-				return true;
-			}
-		}
+        for (int playerItem : playerItems) {
+            if (playerItem == itemID) {
+                return true;
+            }
+        }
 		for (int i = 0; i < getEquipment().length; i++) {
 			if (getEquipment()[i] == itemID) {
 				return true;
 			}
 		}
-		for (int i = 0; i < bankItems.length; i++) {
-			if (bankItems[i] == itemID) {
-				return true;
-			}
-		}
+        for (int bankItem : bankItems) {
+            if (bankItem == itemID) {
+                return true;
+            }
+        }
 		return false;
 	}
 
@@ -4377,7 +4377,7 @@ public class Client extends Player implements Runnable {
 	public long getMiningSpeed() {
 		double pickBonus = Utils.pickBonus[minePick];
 		double level = (double) getLevel(Skill.MINING) / 600;
-		double random = (double) Misc.random(150) / 100;
+		double random = (50 + Misc.random(100)) / 100D;
 		double bonus = 1 + pickBonus * random + level;
 		double time = Utils.mineTimes[mineIndex] / bonus;
 		return (long) time;
@@ -4386,7 +4386,7 @@ public class Client extends Player implements Runnable {
 	public long getWoodcuttingSpeed() {
 		double axeBonus = Utils.axeBonus[findAxe()];
 		double level = (double) getLevel(Skill.WOODCUTTING) / 600;
-		double random = (double) Misc.random(150) / 100;
+		double random = (75 + Misc.random(50)) / 100D;
 		double bonus = 1 + axeBonus * random + level;
 		double time = woodcuttingDelays[woodcuttingIndex] / bonus;
 		return (long) time;
@@ -8969,6 +8969,7 @@ public class Client extends Player implements Runnable {
 			send(new SendString("", 809 + i));
 		send(new SendString("Catherby", 809));
 		send(new SendString("Shilo", 812));
+		send(new SendString("Canifis", 810));
 		showInterface(802);
 	}
 
@@ -8981,10 +8982,10 @@ public class Client extends Player implements Runnable {
 		int[][] travel = {
 				{3057, 2803, 3421, 0}, //Home!
 				{3058, -1, -1, 0}, //Mountain!
-				{3059, 3511, 3506, 0}, //Castle!
+				{3059, 3511, 3506, 0}, //Canifis
 				{3060, -1, -1, 0}, //Tent!
-				{3056, 2863, 2971, 0}, //Tree aka shilo
-				{48054, 2772, 3234, 0} //Totem
+				{3056, 2863, 2971, 0}, //Shilo
+				{48054, 2772, 3234, 0} //Brimhaven
 		};
 		for (int i = 0; i < travel.length; i++)
 			if (travel[i][0] == actionButtonId) { //Initiate the teleport!
@@ -8993,7 +8994,7 @@ public class Client extends Player implements Runnable {
 					send(new SendMessage(!home ? "You are already here!" : "Please select Catherby!"));
 					return;
 				}
-				if (travel[i][1] == -1 || (i == 2 && playerRights < 2)) {
+				if (travel[i][1] == -1) {
 					send(new SendMessage("This will lead you to nothing!"));
 					return;
 				}

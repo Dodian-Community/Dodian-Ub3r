@@ -21,8 +21,20 @@ import org.quartz.JobExecutionException;
 public class EntityProcessor implements Job {
 
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        long now = System.currentTimeMillis();
         /* Npc! */
+        npcProcess();
+        /* Player */
+        playerProcess();
+        /* Items on ground */
+        groundProcess();
+        /* Clear npc update! */
+        for (Npc npc : Server.npcManager.getNpcs()) {
+            npc.clearUpdateFlags();
+        }
+    }
+
+    public void npcProcess() {
+        long now = System.currentTimeMillis();
         for (Npc npc : Server.npcManager.getNpcs()) {
             /* Facing of npc! */
             if(!npc.isFighting() && npc.isAlive())
@@ -102,50 +114,42 @@ public class EntityProcessor implements Job {
                 npc.setText("There is currently " + peopleInWild + " player" + (peopleInWild != 1 ? "s" : "") + " in the wild and " + peopleInEdge + " player" + (peopleInEdge != 1 ? "s" : "") + " in Edgeville!");
             }
         }
-        /* Player */
+    }
+
+    public void playerProcess() {
         long currentTime = System.currentTimeMillis();
         Server.playerHandler.updatePlayerNames();
         /* Cycle to clear some ol' shiez */
-            if (PlayerHandler.cycle % 10 == 0) {
-                Server.connections.clear();
-                Server.nullConnections = 0;
-                // System.out.println("Clearing connections");
-            }
-            if (PlayerHandler.cycle % 100 == 0) {
-                Server.banned.clear();
-                // System.out.println("Clearing connection bans");
-            }
-            if (PlayerHandler.cycle > 10000) {
-                PlayerHandler.cycle = 0;
-            }
-            PlayerHandler.cycle++;
+        if (PlayerHandler.cycle % 10 == 0) {
+            Server.connections.clear();
+            Server.nullConnections = 0;
+            // System.out.println("Clearing connections");
+        }
+        if (PlayerHandler.cycle % 100 == 0) {
+            Server.banned.clear();
+            // System.out.println("Clearing connection bans");
+        }
+        if (PlayerHandler.cycle > 10000) {
+            PlayerHandler.cycle = 0;
+        }
+        PlayerHandler.cycle++;
         //Processing!
         for (int i = 0; i < Constants.maxPlayers; i++) {
-                if (PlayerHandler.players[i] == null) //Hate continue; in a loop! Dodian do it this way..*yikes*
-                    continue;
-                /* Some violation checks due to old code?! */
-                if (!PlayerHandler.players[i].disconnected && !PlayerHandler.players[i].isActive) {
-                    if (PlayerHandler.players[i].violations > 100) {
-                        System.out.println("Disconnecting bugged player " + PlayerHandler.players[i].getPlayerName());
-                        Server.playerHandler.removePlayer(PlayerHandler.players[i]);
-                        PlayerHandler.players[i] = null;
-                        continue;
-                    } else {
-                        PlayerHandler.players[i].violations++;
-                        continue;
-                    }
-                }
-                /* Removing non-responding player */
-                long lp = currentTime - PlayerHandler.players[i].lastPacket;
-                if (PlayerHandler.players[i].dbId < 1 && lp >= 30000) { //Removing non-responding player
-                    PlayerHandler.players[i].disconnected = true;
-                    //System.out.println("Remove disconnect from main!.." + PlayerHandler.players[i].getPlayerName());
-                }
-                /* If not disconnected process a player! */
+            if (PlayerHandler.players[i] == null || !PlayerHandler.players[i].isActive) //Hate continue; in a loop! Dodian do it this way..*yikes*
+                continue;
+            /* Removing non-responding player */
+            long lp = currentTime - PlayerHandler.players[i].lastPacket;
+            if (PlayerHandler.players[i].dbId < 1 && lp >= 30000) { //Removing non-responding player
+                PlayerHandler.players[i].disconnected = true;
+                //System.out.println("Remove disconnect from main!.." + PlayerHandler.players[i].getPlayerName());
+            }
+            /* If not disconnected process a player! */
+            if(!PlayerHandler.players[i].disconnected) {
                 PlayerHandler.players[i].process();
                 while (PlayerHandler.players[i].packetProcess()) ; //Dodian's way of handling packets..Omegalul!
                 PlayerHandler.players[i].postProcessing();
                 PlayerHandler.players[i].getNextPlayerMovement();
+            }
         }
         // after processing update!
         for (int i = 0; i < Constants.maxPlayers; i++) {
@@ -176,19 +180,42 @@ public class EntityProcessor implements Job {
         /* Server update! */
         if(Server.updateRunning) Server.updateElapsed += 0.6;
         if (Server.updateRunning
-                && now - Server.updateStartTime > (Server.updateSeconds * 1000L)) {
+                && currentTime - Server.updateStartTime > (Server.updateSeconds * 1000L)) {
             if (PlayerHandler.getPlayerCount() < 1) {
                 System.exit(0);
             }
         }
-        /* Clear all update! */
+        /* Clear player update! */
         for (int i = 0; i < Constants.maxPlayers; i++) {
             if (PlayerHandler.players[i] == null || !PlayerHandler.players[i].isActive) //Hate continue; in a loop! Dodian do it this way..*yikes*
                 continue;
             PlayerHandler.players[i].clearUpdateFlags();
         }
-        for (Npc npc : Server.npcManager.getNpcs()) {
-            npc.clearUpdateFlags();
+    }
+
+    public void groundProcess() {
+        if (Ground.items.size() < 0) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        for (GroundItem item : Ground.items) {
+            if (!item.canDespawn && item.taken && now - item.dropped >= item.timeDisplay) {
+                item.taken = false;
+                item.visible = false;
+            }
+            if (!item.visible && (now - item.dropped >= item.timeDisplay || !item.canDespawn) || (!item.visible && !item.canDespawn && !item.taken) && (now - item.dropped >= item.timeDisplay || !item.canDespawn)) {
+                for (int i = 0; i < PlayerHandler.players.length; i++) {
+                    Client p = Server.playerHandler.getClient(i);
+                    if (p != null && Server.itemManager.isTradable(item.id) && p.dbId != item.playerId
+                            && Math.abs(p.getPosition().getX() - item.x) <= 114 && Math.abs(p.getPosition().getY() - item.y) <= 114 && p.getPosition().getZ() == item.z) {
+                        p.send(new CreateGroundItem(new GameItem(item.id, item.amount), new Position(item.x, item.y, item.z)));
+                    }
+                }
+                item.visible = true;
+            }
+            if (item.canDespawn && item.visible && now - item.dropped >= (item.timeDisplay + item.timeDespawn)) {
+                Ground.deleteItem(item);
+            }
         }
     }
 

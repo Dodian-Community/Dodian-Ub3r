@@ -21,7 +21,6 @@ public class GroundItemProcessor implements Job {
             return;
         }
         long now = System.currentTimeMillis();
-        if (!Ground.items.isEmpty())
         for (GroundItem item : Ground.items) {
             if (!item.canDespawn && item.taken && now - item.dropped >= item.timeDisplay) {
                 item.taken = false;

@@ -41,6 +41,31 @@ public class Npc extends Entity {
     public NpcData data;
     private boolean fighting = false;
     private final int[] level = new int[7];
+    private int[] bossesId = {
+            4130, //Dad
+            3957, //Ungadulu
+            2585, //Abyssal Guardian
+            3964, //San Tajalon
+            4067, //Black Knight Titan
+            1443, //Jungle demon
+            8, //Nechrayel
+            4922, //Ice queen
+            239, //King black dragon
+            5311, //Head Mourner
+            1432, //Black demon
+            2266, //Daganoth prime
+            2267, //Testing new boss mechanic!
+            2261, //Rock crab boss
+            3127, //Jad
+            99999 // Dummy!
+    };
+    public enum weaponWeakness {
+            NORMAL, SILVERWEAPON, DRAGONWEAPON;
+    }
+    public weaponWeakness weakness = weaponWeakness.NORMAL;
+    private int[] silverWeapon = {
+        3137 /* Vampyre */, 5635, /* Vampyre */ 2593 /* Werewolf */
+    };
 
     public Npc(int slot, int id, Position position, int face) {
         super(position.copy(), slot, Entity.Type.NPC);
@@ -57,39 +82,17 @@ public class Npc extends Entity {
             CalculateMaxHit(true);
             this.currentHealth = data.getHP();
             this.maxHealth = data.getHP();
-
-            //Boss?
-            if (id == 4130) { //Dad
-                boss = true;
-            } else if (id == 3957) { //Ungadulu
-                boss = true;
-            } else if (id == 2585) { //Abyssal Guardian
-                boss = true;
-            } else if (id == 3964) { //San Tajalon
-                boss = true;
-            } else if (id == 4067) { //Black Knight Titan
-                boss = true;
-            } else if (id == 1443) { //Jungle demon
-                boss = true;
-            } else if (id == 8) { //Nechrayel
-                boss = true;
-            } else if (id == 4922) { //Ice queen
-                boss = true;
-            } else if (id == 239) { //King black dragon
-                boss = true;
-            } else if (id == 5311) { //Head Mourner
-                boss = true;
-            } else if (id == 1432) { //Black demon
-                boss = true;
-            } else if (id == 2266) { //Daganoth prime
-                boss = true;
-            } else if (id == 2261) { //Rock crab boss
-                boss = true;
-            } else if (id == 3127) { //Jad
-                boss = true;
-            }
         }
         alive = true;
+        /* Set boss properties */
+        for (int i = 0; i < bossesId.length; i++) {
+            if (bossesId[i] == this.id)
+                boss = true;
+        }
+        for (int i = 0; i < silverWeapon.length; i++) {
+            if (silverWeapon[i] == this.id)
+                weakness = weaponWeakness.SILVERWEAPON;
+        }
     }
 
     public void reloadData() {
@@ -299,9 +302,9 @@ public class Npc extends Entity {
                 type = chance == 6 ? Misc.chance(2) : type;
                 for (Entity e : getDamage().keySet()) {
                     if (e instanceof Player) {
-                        if (fighting && (!getPosition().withinDistance(e.getPosition(), 6) || ((Player) e).getCurrentHealth() < 1 || ((Client) e).deathStage > 0))
+                        if (fighting && (e == null || !getPosition().withinDistance(e.getPosition(), 6) || ((Player) e).getCurrentHealth() < 1 || ((Client) e).deathStage > 0))
                             continue;
-                        if(((Client) e).attackingNpc) {
+                        if(((Client) e).attackingNpc && ((Client) e).target instanceof Npc) { //Test?
                             enemy = Server.playerHandler.getClient(e.getSlot());
                             int hitDiff = 0;
                             if (type == 1) {
@@ -562,7 +565,7 @@ public class Npc extends Entity {
      * @return the respawn
      */
     public int getRespawn() {
-        return boss ? respawn - Math.max(30, PlayerHandler.getPlayerCount() - 1) : respawn;
+        return boss ? respawn - Math.min(30, PlayerHandler.getPlayerCount() - 1) : respawn;
     }
 
     /**
@@ -847,6 +850,17 @@ public class Npc extends Entity {
                     delayGfx(c, 84, 395, 2, landHit(c, true) ? hitDiff : 0, false, this, damageType.FIRE_BREATH);
                 } else attack = false;
                 break;
+            case 3137: //77 vampyre!
+            case 5635: //90 vampyre!
+                if(c.playerBonus[8] < 15) {
+                    hitDiff = 8 + Utils.random(8);
+                    requestAnim(1263, 0);
+                    heal(hitDiff);
+                    c.dealDamage(hitDiff, false, this, damageType.TRUEDAMAGE);
+                    c.send(new SendMessage("*The " + npcName().toLowerCase() + " bites you* Ouch!!"));
+                    setLastAttack(getAttackTimer());
+                } else attack = false;
+            break;
             default: attack = false;
         }
         if(!attack)
